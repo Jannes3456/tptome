@@ -32,13 +32,13 @@ end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.X then
+    if input.KeyCode == Enum.KeyCode.H then
         teleportAllToMe()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // X to bring players in front of you 50 times in 5s", 
+    Text = \"Teleport Loaded! // H to bring players in front of you 50 times in 5s\", 
     Duration = 2
 })

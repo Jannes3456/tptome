@@ -17,8 +17,8 @@ local function teleportPlayersToMe()
             if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local otherHumanoidRootPart = otherPlayer.Character.HumanoidRootPart
                 
-                -- Move player in front and freeze them
-                local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 5
+                -- Move player closer in front and freeze them
+                local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 2
                 otherHumanoidRootPart.CFrame = CFrame.new(myPosition)
                 
                 -- Anchor them so they can't move
@@ -54,6 +54,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // Hold X to teleport players in front of you and freeze them", 
+    Text = "Teleport Loaded! // Hold X to teleport players closer in front of you and freeze them", 
     Duration = 2
 })

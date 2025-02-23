@@ -3,38 +3,45 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local teleporting = false
+local connections = {}
 
 local function teleportPlayersToMe()
     local character = player.Character
     
     if character and character:FindFirstChild("HumanoidRootPart") then
-        local myPosition = character.HumanoidRootPart.Position + character.HumanoidRootPart.CFrame.LookVector * 5
+        teleporting = true
+        local humanoidRootPart = character.HumanoidRootPart
         
         for _, otherPlayer in pairs(Players:GetPlayers()) do
             if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
+                local otherHumanoidRootPart = otherPlayer.Character.HumanoidRootPart
                 
-                -- Store original position server-side but change only locally
-                humanoidRootPart:SetAttribute("OriginalPosition", humanoidRootPart.Position)
+                -- Ensure collision and hit detection work correctly
+                otherHumanoidRootPart.Anchored = false
+                otherHumanoidRootPart.CanCollide = true
                 
-                -- Move them in front of the player on client only
-                humanoidRootPart.CFrame = CFrame.new(myPosition)
-            end
-        end
-        
-        task.delay(3, function()
-            for _, otherPlayer in pairs(Players:GetPlayers()) do
-                if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
-                    local originalPosition = humanoidRootPart:GetAttribute("OriginalPosition")
-                    
-                    if originalPosition then
-                        humanoidRootPart.CFrame = CFrame.new(originalPosition)
+                local function updatePosition()
+                    if teleporting then
+                        local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 5
+                        otherHumanoidRootPart.CFrame = CFrame.new(myPosition)
                     end
                 end
+                
+                connections[otherPlayer] = RunService.RenderStepped:Connect(updatePosition)
             end
-        end)
+        end
     end
+end
+
+local function stopTeleporting()
+    teleporting = false
+    for _, connection in pairs(connections) do
+        if connection then
+            connection:Disconnect()
+        end
+    end
+    connections = {}
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -44,8 +51,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.X then
+        stopTeleporting()
+    end
+end)
+
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // X to teleport all in front of you", 
+    Text = "Teleport Loaded! // Hold X to keep all in front of you and allow damage", 
     Duration = 2
 })

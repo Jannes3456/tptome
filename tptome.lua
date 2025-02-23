@@ -8,20 +8,38 @@ local function teleportAllToMe()
     
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            otherPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5)))
+            local targetPosition = myPosition + player.Character.HumanoidRootPart.CFrame.LookVector * 5
+            local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
+            
+            -- Temporarily teleport the player in front
+            local originalCFrame = humanoidRootPart.CFrame
+            humanoidRootPart.CFrame = CFrame.new(targetPosition)
+            
+            -- Adjust hitbox if necessary
+            if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(5, 5, 5)
+            end
+            
+            -- Restore original position after 5 seconds
+            task.delay(5, function()
+                humanoidRootPart.CFrame = originalCFrame
+                if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
+                end
+            end)
         end
     end
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.H then
+    if input.KeyCode == Enum.KeyCode.X then
         teleportAllToMe()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // H to bring players to you", 
+    Text = "Teleport Loaded! // X to bring players in front of you for 5s", 
     Duration = 2
 })

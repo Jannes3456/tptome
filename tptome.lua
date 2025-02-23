@@ -12,13 +12,38 @@ if not teleportEvent then
     teleportEvent.Name = "TeleportPlayersEvent"
 end
 
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local character = player.Character
+    
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local humanoidRootPart = character.HumanoidRootPart
+        
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local distance = (humanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = otherPlayer
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
 local function teleportPlayersToMe()
     local character = player.Character
     if character and character:FindFirstChild("HumanoidRootPart") then
         teleporting = true
         local humanoidRootPart = character.HumanoidRootPart
         
-        teleportEvent:FireServer(humanoidRootPart.Position, humanoidRootPart.CFrame.LookVector)
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                teleportEvent:FireServer(player, otherPlayer)
+            end
+        end
     end
 end
 
@@ -42,6 +67,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // Hold X to teleport players in front of you on all screens", 
+    Text = "Teleport Loaded! // Hold X to teleport all players to you", 
     Duration = 2
 })

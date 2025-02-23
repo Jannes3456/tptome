@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local connections = {}
+local frozenPlayers = {}
 
 local function teleportPlayersToMe()
     local character = player.Character
@@ -17,18 +17,13 @@ local function teleportPlayersToMe()
             if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local otherHumanoidRootPart = otherPlayer.Character.HumanoidRootPart
                 
-                -- Ensure collision and hit detection work correctly
-                otherHumanoidRootPart.Anchored = false
-                otherHumanoidRootPart.CanCollide = true
+                -- Move player in front and freeze them
+                local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 5
+                otherHumanoidRootPart.CFrame = CFrame.new(myPosition)
                 
-                local function updatePosition()
-                    if teleporting then
-                        local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 5
-                        otherHumanoidRootPart.CFrame = CFrame.new(myPosition)
-                    end
-                end
-                
-                connections[otherPlayer] = RunService.RenderStepped:Connect(updatePosition)
+                -- Anchor them so they can't move
+                otherHumanoidRootPart.Anchored = true
+                frozenPlayers[otherPlayer] = true
             end
         end
     end
@@ -36,12 +31,12 @@ end
 
 local function stopTeleporting()
     teleporting = false
-    for _, connection in pairs(connections) do
-        if connection then
-            connection:Disconnect()
+    for otherPlayer, _ in pairs(frozenPlayers) do
+        if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            otherPlayer.Character.HumanoidRootPart.Anchored = false
         end
     end
-    connections = {}
+    frozenPlayers = {}
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -59,6 +54,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // Hold X to keep all in front of you and allow damage", 
+    Text = "Teleport Loaded! // Hold X to teleport players in front of you and freeze them", 
     Duration = 2
 })

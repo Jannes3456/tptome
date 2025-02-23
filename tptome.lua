@@ -8,21 +8,20 @@ local function teleportAllToMe()
     
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPosition = myPosition + player.Character.HumanoidRootPart.CFrame.LookVector * 5
             local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
             
-            -- Temporarily teleport the player in front
-            local originalCFrame = humanoidRootPart.CFrame
-            humanoidRootPart.CFrame = CFrame.new(targetPosition)
-            
-            -- Adjust hitbox if necessary
-            if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(5, 5, 5)
-            end
-            
-            -- Restore original position after 5 seconds
-            task.delay(5, function()
-                humanoidRootPart.CFrame = originalCFrame
+            task.spawn(function()
+                for i = 1, 50 do
+                    local targetPosition = myPosition + player.Character.HumanoidRootPart.CFrame.LookVector * 5
+                    humanoidRootPart.CFrame = CFrame.new(targetPosition)
+                    
+                    if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                        otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(5, 5, 5)
+                    end
+                    
+                    task.wait(0.1)
+                end
+                
                 if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
                     otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
                 end
@@ -40,6 +39,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // X to bring players in front of you for 5s", 
+    Text = "Teleport Loaded! // X to bring players in front of you 50 times in 5s", 
     Duration = 2
 })

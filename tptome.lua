@@ -1,42 +1,30 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local frozenPlayers = {}
+
+-- RemoteEvent für serverseitige Positionsänderung
+local teleportEvent = ReplicatedStorage:FindFirstChild("TeleportPlayersEvent")
+if not teleportEvent then
+    teleportEvent = Instance.new("RemoteEvent", ReplicatedStorage)
+    teleportEvent.Name = "TeleportPlayersEvent"
+end
 
 local function teleportPlayersToMe()
     local character = player.Character
-    
     if character and character:FindFirstChild("HumanoidRootPart") then
         teleporting = true
         local humanoidRootPart = character.HumanoidRootPart
         
-        for _, otherPlayer in pairs(Players:GetPlayers()) do
-            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local otherHumanoidRootPart = otherPlayer.Character.HumanoidRootPart
-                
-                -- Move player closer in front and freeze them
-                local myPosition = humanoidRootPart.Position + humanoidRootPart.CFrame.LookVector * 2
-                otherHumanoidRootPart.CFrame = CFrame.new(myPosition)
-                
-                -- Anchor them so they can't move
-                otherHumanoidRootPart.Anchored = true
-                frozenPlayers[otherPlayer] = true
-            end
-        end
+        teleportEvent:FireServer(humanoidRootPart.Position, humanoidRootPart.CFrame.LookVector)
     end
 end
 
 local function stopTeleporting()
     teleporting = false
-    for otherPlayer, _ in pairs(frozenPlayers) do
-        if otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            otherPlayer.Character.HumanoidRootPart.Anchored = false
-        end
-    end
-    frozenPlayers = {}
+    teleportEvent:FireServer(nil, nil)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -54,6 +42,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // Hold X to teleport players closer in front of you and freeze them", 
+    Text = "Teleport Loaded! // Hold X to teleport players in front of you on all screens", 
     Duration = 2
 })

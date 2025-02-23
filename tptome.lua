@@ -1,45 +1,51 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 
-local function teleportAllToMe()
-    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local myPosition = player.Character.HumanoidRootPart.Position
+local function teleportPlayersToMe()
+    local character = player.Character
     
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
-            local targetPosition = myPosition + player.Character.HumanoidRootPart.CFrame.LookVector * 5
-            
-            -- Temporarily teleport the player in front
-            local originalCFrame = humanoidRootPart.CFrame
-            humanoidRootPart.CFrame = CFrame.new(targetPosition)
-            
-            -- Adjust hitbox size
-            if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(5, 5, 5)
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local myPosition = character.HumanoidRootPart.Position + character.HumanoidRootPart.CFrame.LookVector * 5
+        
+        for _, otherPlayer in pairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
+                
+                -- Store original position server-side but change only locally
+                humanoidRootPart:SetAttribute("OriginalPosition", humanoidRootPart.Position)
+                
+                -- Move them in front of the player on client only
+                humanoidRootPart.CFrame = CFrame.new(myPosition)
             end
-            
-            -- Restore after 5 seconds
-            task.delay(5, function()
-                humanoidRootPart.CFrame = originalCFrame
-                if otherPlayer.Character:FindFirstChildOfClass("Humanoid") then
-                    otherPlayer.Character.HumanoidRootPart.Size = Vector3.new(2, 2, 1)
-                end
-            end)
         end
+        
+        task.delay(3, function()
+            for _, otherPlayer in pairs(Players:GetPlayers()) do
+                if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local humanoidRootPart = otherPlayer.Character.HumanoidRootPart
+                    local originalPosition = humanoidRootPart:GetAttribute("OriginalPosition")
+                    
+                    if originalPosition then
+                        humanoidRootPart.CFrame = CFrame.new(originalPosition)
+                    end
+                end
+            end
+        end)
     end
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.H then
-        teleportAllToMe()
+    if input.KeyCode == Enum.KeyCode.X then
+        teleportPlayersToMe()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // H to bring players in front of you for 5s", 
+    Text = "Teleport Loaded! // X to teleport all in front of you", 
     Duration = 2
 })

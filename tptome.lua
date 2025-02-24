@@ -1,7 +1,9 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService") -- Für kontinuierliche Updates
 
 local player = Players.LocalPlayer
+local isFloating = false
 
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
@@ -28,22 +30,33 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
-local function teleportAboveEnemyFor3Seconds()
+local function floatAboveEnemyFor3Seconds()
+    if isFloating then return end -- Falls der Spieler bereits schwebt, abbrechen
     local closestPlayer = getClosestPlayer()
     if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local enemyPosition = closestPlayer.Character.HumanoidRootPart.Position
-        local newPosition = enemyPosition + Vector3.new(0, 5, 0) -- 5 Studs über dem Gegner
+        local enemyHRP = closestPlayer.Character.HumanoidRootPart
+        local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local humanoidRootPart = player.Character.HumanoidRootPart
+        if humanoidRootPart then
             local originalPosition = humanoidRootPart.Position -- Speichere die alte Position
-            
-            -- Teleportiere den Spieler nur lokal
-            humanoidRootPart.CFrame = CFrame.new(newPosition)
+            isFloating = true -- Markiere, dass der Spieler schwebt
 
-            -- Nach 3 Sekunden zurück teleportieren
+            -- Verbindung zur Render-Schleife, um Position permanent anzupassen
+            local connection
+            connection = RunService.RenderStepped:Connect(function()
+                if not isFloating or not closestPlayer or not closestPlayer.Character then
+                    connection:Disconnect()
+                    return
+                end
+                -- Ständig über dem Gegner aktualisieren
+                humanoidRootPart.CFrame = CFrame.new(enemyHRP.Position + Vector3.new(0, 5, 0))
+            end)
+
+            -- Warte 3 Sekunden, dann beende das Schweben
             task.wait(3)
-            humanoidRootPart.CFrame = CFrame.new(originalPosition)
+            isFloating = false
+            connection:Disconnect()
+            humanoidRootPart.CFrame = CFrame.new(originalPosition) -- Zurück zur alten Position
         end
     end
 end
@@ -51,12 +64,12 @@ end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
-        teleportAboveEnemyFor3Seconds()
+        floatAboveEnemyFor3Seconds()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Drücke X, um für 3 Sekunden über einem Gegner zu schweben!", 
+    Text = "Drücke X, um 3 Sekunden über einem Gegner zu schweben!", 
     Duration = 2
 })

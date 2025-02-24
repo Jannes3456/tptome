@@ -15,8 +15,8 @@ local function createStatusUI()
     statusGui.Parent = game:GetService("CoreGui")
 
     statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(0, 200, 0, 80)
-    statusLabel.Position = UDim2.new(0.01, 0, 0.85, 0) -- Bottom left
+    statusLabel.Size = UDim2.new(0, 200, 0, 100)
+    statusLabel.Position = UDim2.new(0.01, 0, 0.80, 0) -- Bottom left
     statusLabel.BackgroundTransparency = 0.5
     statusLabel.TextScaled = true
     statusLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -26,10 +26,14 @@ local function createStatusUI()
 end
 
 local function updateStatus()
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    local healthText = humanoid and ("Health: " .. math.floor(humanoid.Health)) or "Health: N/A"
+    
     if statusLabel then
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
-                           "Objects: " .. (objectsRemoved and "REMOVED" or "VISIBLE")
+                           "Objects: " .. (objectsRemoved and "REMOVED" or "VISIBLE") .. "\n" ..
+                           healthText
     end
 end
 
@@ -77,17 +81,25 @@ local function teleportClosestHitboxToMe()
     end
 end
 
-local function removeAllObjectsExceptGround()
+local function removeMapObjects()
     if not objectsRemoved then
         for _, part in pairs(Workspace:GetDescendants()) do
             if part:IsA("Part") or part:IsA("MeshPart") then
-                if not part.Name:lower():find("ground") and part.Position.Y > -5 then
+                if not part.Name:lower():find("ground") and not part:IsDescendantOf(game:GetService("StarterPack")) and not part:IsDescendantOf(game:GetService("Lighting")) then
                     part:Destroy()
                 end
             end
         end
         objectsRemoved = true
-        showNotification("Flame", "All Objects Removed Except Ground!")
+        showNotification("Flame", "All Map Objects Removed, Weapons & Essentials Kept!")
+    end
+end
+
+local function healPlayer()
+    local humanoid = player.Character and player.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.Health = math.min(humanoid.Health + 10, humanoid.MaxHealth)
+        showNotification("Flame", "+10 Health Added!")
     end
 end
 
@@ -116,8 +128,10 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.X then
         teleportClosestHitboxToMe()
     elseif input.KeyCode == Enum.KeyCode.V then
-        removeAllObjectsExceptGround()
+        removeMapObjects()
+    elseif input.KeyCode == Enum.KeyCode.Z then
+        healPlayer()
     end
 end)
 
-showNotification("Flame", "Teleport & Object Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Everything Except Ground")
+showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept)\nPress Z: Gain 10 Health")

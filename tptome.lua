@@ -1,7 +1,10 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
+local teleporting = false
 
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
@@ -29,13 +32,39 @@ local function getClosestPlayer()
 end
 
 local function teleportClosestPlayerToMe()
-    local closestPlayer = getClosestPlayer()
-    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local myPosition = player.Character.HumanoidRootPart.Position
-        if closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            closestPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition)
+    teleporting = not teleporting
+    if teleporting then
+        while teleporting do
+            local closestPlayer = getClosestPlayer()
+            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local myPosition = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 3
+                closestPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition) * CFrame.Angles(0, math.rad(180), 0) -- Gegner schaut zu mir
+                
+                -- Hitbox des Gegners vor dem Spieler setzen
+                if closestPlayer.Character:FindFirstChild("Humanoid") then
+                    closestPlayer.Character.HumanoidRootPart.Size = Vector3.new(10, 10, 10) -- Größere Hitbox
+                    closestPlayer.Character.HumanoidRootPart.CanCollide = false -- Verhindert Kollision
+                end
+            end
+            RunService.RenderStepped:Wait()
         end
     end
+end
+
+-- Kugeln durch alles außer den Gegner gehen lassen
+local function onBulletFired(bullet)
+    bullet.Touched:Connect(function(hit)
+        if hit:IsDescendantOf(player.Character) then return end -- Verhindert Kollision mit sich selbst
+        
+        local closestPlayer = getClosestPlayer()
+        if closestPlayer and hit:IsDescendantOf(closestPlayer.Character) then
+            -- Kugel trifft den Gegner
+            print("Bullet hit the closest enemy!")
+        else
+            -- Verhindert Kollision mit Wänden oder anderen Objekten
+            bullet.CanCollide = false
+        end
+    end)
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -45,8 +74,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+Workspace.ChildAdded:Connect(function(child)
+    if child:IsA("Part") and child.Name == "Bullet" then
+        onBulletFired(child)
+    end
+end)
+
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Reverse Teleport Loaded! // X to bring nearest enemy", 
+    Text = "Permanent Reverse Teleport Loaded! // Press X to toggle", 
     Duration = 2
 })

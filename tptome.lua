@@ -5,7 +5,7 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local wallsRemoved = false
+local objectsRemoved = false
 local statusGui, statusLabel
 
 -- UI Label for Status Display in Bottom Left
@@ -29,7 +29,7 @@ local function updateStatus()
     if statusLabel then
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
-                           "Walls: " .. (wallsRemoved and "REMOVED" or "VISIBLE")
+                           "Objects: " .. (objectsRemoved and "REMOVED" or "VISIBLE")
     end
 end
 
@@ -77,19 +77,36 @@ local function teleportClosestHitboxToMe()
     end
 end
 
-local function removeWalls()
-    if not wallsRemoved then
+local function removeAllObjectsExceptGround()
+    if not objectsRemoved then
         for _, part in pairs(Workspace:GetDescendants()) do
             if part:IsA("Part") or part:IsA("MeshPart") then
-                if part.Name:lower():find("wall") or part.Size.Y > 10 then
+                if part.Name:lower():find("ground") == nil and part.Size.Y <= 10 then
                     part:Destroy()
                 end
             end
         end
-        wallsRemoved = true
-        showNotification("Flame", "All Walls Removed!")
+        objectsRemoved = true
+        showNotification("Flame", "All Objects Removed Except Ground!")
     end
 end
+
+-- Make bullets ignore everything except players
+local function onBulletFired(bullet)
+    bullet.CanCollide = false
+    bullet.Touched:Connect(function(hit)
+        local character = hit.Parent
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid:TakeDamage(25) -- Adjust damage as needed
+        end
+    end)
+end
+
+Workspace.ChildAdded:Connect(function(child)
+    if child:IsA("Part") and child.Name == "Bullet" then
+        onBulletFired(child)
+    end
+end)
 
 createStatusUI()
 updateStatus()
@@ -99,8 +116,8 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.X then
         teleportClosestHitboxToMe()
     elseif input.KeyCode == Enum.KeyCode.V then
-        removeWalls()
+        removeAllObjectsExceptGround()
     end
 end)
 
-showNotification("Flame", "Teleport & Wall Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Walls")
+showNotification("Flame", "Teleport & Object Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Objects Except Ground")

@@ -3,7 +3,11 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService") -- Für kontinuierliche Updates
 
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 local isFloating = false
+local originalCFrame = nil
+local connection = nil
 
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
@@ -19,7 +23,7 @@ local function getClosestPlayer()
     for _, otherPlayer in pairs(Players:GetPlayers()) do
         if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
             if not isOnSameTeam(otherPlayer) then
-                local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
+                local distance = (humanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
                 if distance < shortestDistance then
                     shortestDistance = distance
                     closestPlayer = otherPlayer
@@ -30,34 +34,41 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
-local function floatAboveEnemyFor3Seconds()
+local function startFloating()
     if isFloating then return end -- Falls du schon schwebst, nicht erneut starten
     local closestPlayer = getClosestPlayer()
-    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        local enemyHRP = closestPlayer.Character.HumanoidRootPart
-        local enemyHead = closestPlayer.Character:FindFirstChild("Head") -- Kopf des Gegners
-        local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
+        local enemyHead = closestPlayer.Character.Head
+        originalCFrame = humanoidRootPart.CFrame -- Speichert die originale Position
+        isFloating = true -- Markiere, dass der Spieler schwebt
 
-        if humanoidRootPart and enemyHead then
-            local originalPosition = humanoidRootPart.Position -- Speichere die alte Position
-            isFloating = true -- Markiere, dass der Spieler schwebt
-
-            -- Verbindung zur Render-Schleife, um Position permanent anzupassen
-            local connection
-            connection = RunService.RenderStepped:Connect(function()
-                if not isFloating or not closestPlayer or not closestPlayer.Character then
-                    connection:Disconnect()
-                    return
+        -- Verbindung zur Render-Schleife, um Position permanent anzupassen
+        connection = RunService.RenderStepped:Connect(function()
+            if not isFloating or not closestPlayer or not closestPlayer.Character then
+                connection:Disconnect()
+                return
+            end
+            -- Nur das Charakter-Modell bewegen (nicht die Hitbox)
+            for _, part in pairs(character:GetChildren()) do
+                if part:IsA("BasePart") and part ~= humanoidRootPart then
+                    part.CFrame = CFrame.new(enemyHead.Position + Vector3.new(0, 3, 0))
                 end
-                -- Ständig über dem Kopf des Gegners bleiben
-                humanoidRootPart.CFrame = CFrame.new(enemyHead.Position + Vector3.new(0, 3, 0)) -- 3 Studs über dem Kopf
-            end)
+            end
+        end)
+    end
+end
 
-            -- Warte 3 Sekunden, dann beende das Schweben
-            task.wait(3)
-            isFloating = false
-            connection:Disconnect()
-            humanoidRootPart.CFrame = CFrame.new(originalPosition) -- Zurück zur alten Position
+local function stopFloating()
+    if not isFloating then return end -- Falls du nicht schwebst, nichts tun
+    isFloating = false
+    if connection then connection:Disconnect() end
+
+    -- Charakter-Modell zurück zur Original-Position setzen
+    if originalCFrame then
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") and part ~= humanoidRootPart then
+                part.CFrame = originalCFrame
+            end
         end
     end
 end
@@ -65,12 +76,18 @@ end
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
-        floatAboveEnemyFor3Seconds()
+        startFloating()
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.X then
+        stopFloating()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Drücke X, um 3 Sekunden über dem Kopf eines Gegners zu schweben!", 
+    Text = "Halte X gedrückt, um über dem Kopf eines Gegners zu schweben!", 
     Duration = 2
 })

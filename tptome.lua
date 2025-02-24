@@ -81,13 +81,15 @@ local function teleportClosestHitboxToMe()
     end
 end
 
-local function createSafetyPlatform()
+local function createTemporaryPlatform()
     local platform = Instance.new("Part")
-    platform.Size = Vector3.new(100, 5, 100)
-    platform.Position = player.Character.HumanoidRootPart.Position - Vector3.new(0, 20, 0)
+    platform.Size = Vector3.new(10, 2, 10)
+    platform.Position = player.Character.HumanoidRootPart.Position - Vector3.new(0, 5, 0)
     platform.Anchored = true
-    platform.Color = Color3.new(0, 1, 0)
+    platform.Color = Color3.new(1, 1, 0)
     platform.Parent = Workspace
+    task.wait(5)
+    platform:Destroy()
 end
 
 local function removeMapObjects()
@@ -99,7 +101,6 @@ local function removeMapObjects()
                 end
             end
         end
-        createSafetyPlatform()
         objectsRemoved = true
         showNotification("Flame", "All Map Objects Removed, Weapons & Essentials Kept!")
     end
@@ -145,7 +146,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         removeMapObjects()
     elseif input.KeyCode == Enum.KeyCode.Z then
         healPlayer()
+    elseif input.UserInputType == Enum.UserInputType.MouseButton4 then
+        createTemporaryPlatform()
     end
 end)
 
-showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept) + Create Safety Platform\nPress Z: Gain 10 Health")
+showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept)\nPress Z: Gain 10 Health\nPress MB4: Create Temporary Platform")

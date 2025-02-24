@@ -81,6 +81,15 @@ local function teleportClosestHitboxToMe()
     end
 end
 
+local function createSafetyPlatform()
+    local platform = Instance.new("Part")
+    platform.Size = Vector3.new(100, 5, 100)
+    platform.Position = player.Character.HumanoidRootPart.Position - Vector3.new(0, 20, 0)
+    platform.Anchored = true
+    platform.Color = Color3.new(0, 1, 0)
+    platform.Parent = Workspace
+end
+
 local function removeMapObjects()
     if not objectsRemoved then
         for _, part in pairs(Workspace:GetDescendants()) do
@@ -90,6 +99,7 @@ local function removeMapObjects()
                 end
             end
         end
+        createSafetyPlatform()
         objectsRemoved = true
         showNotification("Flame", "All Map Objects Removed, Weapons & Essentials Kept!")
     end
@@ -134,4 +144,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept)\nPress Z: Gain 10 Health")
+showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept) + Create Safety Platform\nPress Z: Gain 10 Health")

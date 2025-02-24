@@ -2,22 +2,11 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local PhysicsService = game:GetService("PhysicsService")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local magicBulletsEnabled = false
-local wallsInvisible = false
+local wallsRemoved = false
 local statusGui, statusLabel
-
--- Set up Collision Groups to allow bullets to ignore walls
-local function setupCollisionGroups()
-    pcall(function()
-        PhysicsService:CreateCollisionGroup("NoCollideWalls")
-        PhysicsService:CollisionGroupSetCollidable("NoCollideWalls", "Default", false)
-        PhysicsService:CollisionGroupSetCollidable("NoCollideWalls", "NoCollideWalls", false)
-    end)
-end
 
 -- UI Label for Status Display in Bottom Left
 local function createStatusUI()
@@ -40,8 +29,7 @@ local function updateStatus()
     if statusLabel then
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
-                           "Magic Bullets: " .. (magicBulletsEnabled and "ON" or "OFF") .. "\n" ..
-                           "Walls: " .. (wallsInvisible and "INVISIBLE" or "VISIBLE")
+                           "Walls: " .. (wallsRemoved and "REMOVED" or "VISIBLE")
     end
 end
 
@@ -89,32 +77,20 @@ local function teleportClosestHitboxToMe()
     end
 end
 
-local function toggleMagicBullets()
-    magicBulletsEnabled = not magicBulletsEnabled
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") and obj.Name == "Bullet" then
-            obj.CanCollide = not magicBulletsEnabled
-            obj.CollisionGroup = magicBulletsEnabled and "NoCollideWalls" or "Default"
-        end
-    end
-    showNotification("Flame", "Magic Bullets " .. (magicBulletsEnabled and "Enabled" or "Disabled"))
-end
-
-local function toggleWalls()
-    wallsInvisible = not wallsInvisible
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("Part") or part:IsA("MeshPart") then
-            if part.Name:lower():find("wall") or part.Size.Y > 10 then
-                part.Transparency = wallsInvisible and 1 or 0
-                part.CanCollide = not wallsInvisible
-                part.CollisionGroup = wallsInvisible and "NoCollideWalls" or "Default"
+local function removeWalls()
+    if not wallsRemoved then
+        for _, part in pairs(Workspace:GetDescendants()) do
+            if part:IsA("Part") or part:IsA("MeshPart") then
+                if part.Name:lower():find("wall") or part.Size.Y > 10 then
+                    part:Destroy()
+                end
             end
         end
+        wallsRemoved = true
+        showNotification("Flame", "All Walls Removed!")
     end
-    showNotification("Flame", "Walls " .. (wallsInvisible and "Invisible" or "Visible"))
 end
 
-setupCollisionGroups()
 createStatusUI()
 updateStatus()
 
@@ -122,11 +98,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
         teleportClosestHitboxToMe()
-    elseif input.KeyCode == Enum.KeyCode.C then
-        toggleMagicBullets()
     elseif input.KeyCode == Enum.KeyCode.V then
-        toggleWalls()
+        removeWalls()
     end
 end)
 
-showNotification("Flame", "Magic Bullets, Teleport & Wall Toggle Loaded!\nPress X: Teleport hitbox\nPress C: Toggle Magic Bullets\nPress V: Toggle walls")
+showNotification("Flame", "Teleport & Wall Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Walls")

@@ -14,6 +14,37 @@ local enemyBoxVisible = false
 local boxPart = nil
 local enemyBoxPart = nil
 
+-- UI Label for Status Display
+local statusGui = Instance.new("ScreenGui")
+statusGui.Parent = player:FindFirstChildOfClass("PlayerGui")
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 300, 0, 100)
+statusLabel.Position = UDim2.new(0.02, 0, 0.85, 0)
+statusLabel.BackgroundTransparency = 0.5
+statusLabel.TextScaled = true
+statusLabel.TextColor3 = Color3.new(1, 1, 1)
+statusLabel.BackgroundColor3 = Color3.new(0, 0, 0)
+statusLabel.Parent = statusGui
+
+local function updateStatus()
+    statusLabel.Text = "Teleport: " .. (teleporting and "ON" or "OFF") ..
+                       "\nMagic Bullets: " .. (magicBulletsEnabled and "ON" or "OFF") ..
+                       "\nESP: " .. (ESP and "ON" or "OFF") ..
+                       "\nWalls: " .. (wallsInvisible and "INVISIBLE" or "VISIBLE")
+end
+
+local function showNotification(title, text)
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = text,
+            Duration = 2
+        })
+    end)
+    updateStatus()
+end
+
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
         return player.Team == otherPlayer.Team
@@ -41,6 +72,7 @@ end
 
 local function teleportClosestHitboxToMe()
     teleporting = not teleporting
+    showNotification("Flame", "Hitbox Teleport " .. (teleporting and "Enabled" or "Disabled"))
     if teleporting then
         while teleporting do
             local closestPlayer = getClosestPlayer()
@@ -55,15 +87,12 @@ end
 
 local function toggleMagicBullets()
     magicBulletsEnabled = not magicBulletsEnabled
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Flame", 
-        Text = "Magic Bullets " .. (magicBulletsEnabled and "Enabled" or "Disabled"), 
-        Duration = 2
-    })
+    showNotification("Flame", "Magic Bullets " .. (magicBulletsEnabled and "Enabled" or "Disabled"))
 end
 
 local function toggleESP()
     ESP = not ESP
+    showNotification("Flame", "ESP " .. (ESP and "Enabled" or "Disabled"))
     for _, player in pairs(Players:GetPlayers()) do
         EspActivate(player)
     end
@@ -80,11 +109,7 @@ local function toggleWalls()
             end
         end
     end
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Flame", 
-        Text = "Walls " .. (wallsInvisible and "Invisible" or "Visible"), 
-        Duration = 2
-    })
+    showNotification("Flame", "Walls " .. (wallsInvisible and "Invisible" or "Visible"))
 end
 
 local function setupCollisionGroup()
@@ -121,8 +146,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Flame", 
-    Text = "Magic Bullets, ESP, Teleport & Wall Toggle Loaded! // Press X to teleport hitbox, C to toggle Magic Bullets, E to toggle ESP, V to toggle walls", 
-    Duration = 2
-})
+showNotification("Flame", "Magic Bullets, ESP, Teleport & Wall Toggle Loaded! \nPress X: Teleport hitbox \nPress C: Toggle Magic Bullets \nPress E: Toggle ESP \nPress V: Toggle walls")

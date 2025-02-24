@@ -31,13 +31,14 @@ local function getClosestPlayer()
 end
 
 local function floatAboveEnemyFor3Seconds()
-    if isFloating then return end -- Falls der Spieler bereits schwebt, abbrechen
+    if isFloating then return end -- Falls du schon schwebst, nicht erneut starten
     local closestPlayer = getClosestPlayer()
     if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
         local enemyHRP = closestPlayer.Character.HumanoidRootPart
+        local enemyHead = closestPlayer.Character:FindFirstChild("Head") -- Kopf des Gegners
         local humanoidRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
-        if humanoidRootPart then
+        if humanoidRootPart and enemyHead then
             local originalPosition = humanoidRootPart.Position -- Speichere die alte Position
             isFloating = true -- Markiere, dass der Spieler schwebt
 
@@ -48,8 +49,8 @@ local function floatAboveEnemyFor3Seconds()
                     connection:Disconnect()
                     return
                 end
-                -- Ständig über dem Gegner aktualisieren
-                humanoidRootPart.CFrame = CFrame.new(enemyHRP.Position + Vector3.new(0, 5, 0))
+                -- Ständig über dem Kopf des Gegners bleiben
+                humanoidRootPart.CFrame = CFrame.new(enemyHead.Position + Vector3.new(0, 3, 0)) -- 3 Studs über dem Kopf
             end)
 
             -- Warte 3 Sekunden, dann beende das Schweben
@@ -70,6 +71,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Drücke X, um 3 Sekunden über einem Gegner zu schweben!", 
+    Text = "Drücke X, um 3 Sekunden über dem Kopf eines Gegners zu schweben!", 
     Duration = 2
 })

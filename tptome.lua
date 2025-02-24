@@ -81,7 +81,7 @@ local function removeAllObjectsExceptGround()
     if not objectsRemoved then
         for _, part in pairs(Workspace:GetDescendants()) do
             if part:IsA("Part") or part:IsA("MeshPart") then
-                if part.Name:lower():find("ground") == nil and part.Size.Y <= 10 then
+                if not part.Name:lower():find("ground") and part.Position.Y > -5 then
                     part:Destroy()
                 end
             end
@@ -120,4 +120,4 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
-showNotification("Flame", "Teleport & Object Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Objects Except Ground")
+showNotification("Flame", "Teleport & Object Removal Loaded!\nPress X: Teleport hitbox\nPress V: Remove Everything Except Ground")

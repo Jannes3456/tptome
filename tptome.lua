@@ -5,7 +5,6 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local objectsRemoved = false
 local statusGui, statusLabel
 
 -- UI Label for Status Display in Bottom Left
@@ -32,7 +31,6 @@ local function updateStatus()
     if statusLabel then
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
-                           "Objects: " .. (objectsRemoved and "REMOVED" or "VISIBLE") .. "\n" ..
                            healthText
     end
 end
@@ -64,6 +62,18 @@ local function getClosestPlayer()
     return closestPlayer
 end
 
+local function enlargeEnemyHitbox()
+    local closestPlayer = getClosestPlayer()
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        for _, part in pairs(closestPlayer.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.Size = part.Size * 200
+            end
+        end
+        showNotification("Flame", "Enemy Hitbox Enlarged!")
+    end
+end
+
 local function teleportClosestHitboxToMe()
     teleporting = not teleporting
     showNotification("Flame", "Hitbox Teleport " .. (teleporting and "Enabled" or "Disabled"))
@@ -90,20 +100,6 @@ local function createTemporaryPlatform()
     platform.Parent = Workspace
     task.wait(5)
     platform:Destroy()
-end
-
-local function removeMapObjects()
-    if not objectsRemoved then
-        for _, part in pairs(Workspace:GetDescendants()) do
-            if part:IsA("Part") or part:IsA("MeshPart") then
-                if not part.Name:lower():find("ground") and not part:IsDescendantOf(game:GetService("StarterPack")) and not part:IsDescendantOf(game:GetService("Lighting")) then
-                    part:Destroy()
-                end
-            end
-        end
-        objectsRemoved = true
-        showNotification("Flame", "All Map Objects Removed, Weapons & Essentials Kept!")
-    end
 end
 
 local function healPlayer()
@@ -142,13 +138,13 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
         teleportClosestHitboxToMe()
-    elseif input.KeyCode == Enum.KeyCode.V then
-        removeMapObjects()
     elseif input.KeyCode == Enum.KeyCode.Z then
         healPlayer()
+    elseif input.KeyCode == Enum.KeyCode.C then
+        enlargeEnemyHitbox()
     elseif input.UserInputType == Enum.UserInputType.MouseButton4 then
         createTemporaryPlatform()
     end
 end)
 
-showNotification("Flame", "Teleport, Health Boost & Map Cleanup Loaded!\nPress X: Teleport hitbox\nPress V: Remove Map Objects (Weapons & Essentials Kept)\nPress Z: Gain 10 Health\nPress MB4: Create Temporary Platform")
+showNotification("Flame", "Teleport & Health Boost Loaded!\nPress X: Teleport hitbox\nPress Z: Gain 10 Health\nPress C: Enlarge Enemy Hitbox\nPress MB4: Create Temporary Platform")

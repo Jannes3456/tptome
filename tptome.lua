@@ -7,6 +7,8 @@ local PhysicsService = game:GetService("PhysicsService")
 local player = Players.LocalPlayer
 local teleporting = false
 local magicBulletsEnabled = false
+local ESP = false
+local wallsInvisible = false
 local boxVisible = false
 local enemyBoxVisible = false
 local boxPart = nil
@@ -60,44 +62,50 @@ local function toggleMagicBullets()
     })
 end
 
-local function toggleEnemyBox()
-    enemyBoxVisible = not enemyBoxVisible
-    local closestPlayer = getClosestPlayer()
-    if enemyBoxVisible and closestPlayer and closestPlayer.Character then
-        if not enemyBoxPart then
-            enemyBoxPart = Instance.new("Part")
-            enemyBoxPart.Size = Vector3.new(5, 7, 5)
-            enemyBoxPart.Transparency = 0.5
-            enemyBoxPart.Anchored = true
-            enemyBoxPart.CanCollide = false
-            enemyBoxPart.Color = Color3.new(0, 1, 0)
-            enemyBoxPart.Material = Enum.Material.ForceField -- Macht die Box durch Wände sichtbar
-            enemyBoxPart.Parent = Workspace
-        end
-        RunService.RenderStepped:Connect(function()
-            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                enemyBoxPart.CFrame = closestPlayer.Character.HumanoidRootPart.CFrame
+local function toggleESP()
+    ESP = not ESP
+    for _, player in pairs(Players:GetPlayers()) do
+        EspActivate(player)
+    end
+end
+
+local function toggleWalls()
+    wallsInvisible = not wallsInvisible
+    for _, part in pairs(Workspace:GetDescendants()) do
+        if part:IsA("Part") or part:IsA("MeshPart") then
+            if part.Name:lower():find("wall") or part.Size.Y > 10 then
+                part.Transparency = wallsInvisible and 1 or 0
+                part.CanCollide = not wallsInvisible
+                part.CollisionGroup = wallsInvisible and "NoCollide" or "Default"
             end
-        end)
-    else
-        if enemyBoxPart then
-            enemyBoxPart:Destroy()
-            enemyBoxPart = nil
         end
     end
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Flame", 
+        Text = "Walls " .. (wallsInvisible and "Invisible" or "Visible"), 
+        Duration = 2
+    })
 end
 
-local function onBulletFired(bullet)
-    if magicBulletsEnabled then
-        bullet.CanCollide = false
-        bullet.CollisionGroup = "NoCollide"
-    end
+local function setupCollisionGroup()
+    pcall(function()
+        PhysicsService:CreateCollisionGroup("NoCollide")
+        PhysicsService:CollisionGroupSetCollidable("NoCollide", "Default", false)
+        PhysicsService:CollisionGroupSetCollidable("NoCollide", "NoCollide", false)
+    end)
 end
 
-Workspace.ChildAdded:Connect(function(child)
-    if child:IsA("Part") and child.Name == "Bullet" then
-        onBulletFired(child)
-    end
+setupCollisionGroup()
+
+for _, player in pairs(Players:GetPlayers()) do
+    EspActivate(player)
+    player.CharacterAdded:Connect(function() EspActivate(player) end)
+    player:GetPropertyChangedSignal("Team"):Connect(function() EspActivate(player) end)
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function() EspActivate(player) end)
+    player:GetPropertyChangedSignal("Team"):Connect(function() EspActivate(player) end)
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -107,12 +115,14 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     elseif input.KeyCode == Enum.KeyCode.C then
         toggleMagicBullets()
     elseif input.KeyCode == Enum.KeyCode.E then
-        toggleEnemyBox()
+        toggleESP()
+    elseif input.KeyCode == Enum.KeyCode.V then
+        toggleWalls()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Permanent Reverse Teleport Loaded! // Press X to teleport hitbox, C to toggle Magic Bullets, E to toggle enemy box", 
+    Text = "Magic Bullets, ESP, Teleport & Wall Toggle Loaded! // Press X to teleport hitbox, C to toggle Magic Bullets, E to toggle ESP, V to toggle walls", 
     Duration = 2
 })

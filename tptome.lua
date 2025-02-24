@@ -6,7 +6,7 @@ local PhysicsService = game:GetService("PhysicsService")
 
 local player = Players.LocalPlayer
 local teleporting = false
-local bulletsIgnoreWalls = false
+local magicBulletsEnabled = false
 local boxVisible = false
 local enemyBoxVisible = false
 local boxPart = nil
@@ -51,29 +51,13 @@ local function teleportClosestHitboxToMe()
     end
 end
 
-local function toggleBox()
-    boxVisible = not boxVisible
-    if boxVisible then
-        if not boxPart then
-            boxPart = Instance.new("Part")
-            boxPart.Size = Vector3.new(5, 7, 5)
-            boxPart.Transparency = 0.5
-            boxPart.Anchored = true
-            boxPart.CanCollide = false
-            boxPart.Color = Color3.new(1, 0, 0)
-            boxPart.Parent = Workspace
-        end
-        RunService.RenderStepped:Connect(function()
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                boxPart.CFrame = player.Character.HumanoidRootPart.CFrame
-            end
-        end)
-    else
-        if boxPart then
-            boxPart:Destroy()
-            boxPart = nil
-        end
-    end
+local function toggleMagicBullets()
+    magicBulletsEnabled = not magicBulletsEnabled
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Flame", 
+        Text = "Magic Bullets " .. (magicBulletsEnabled and "Enabled" or "Disabled"), 
+        Duration = 2
+    })
 end
 
 local function toggleEnemyBox()
@@ -87,6 +71,7 @@ local function toggleEnemyBox()
             enemyBoxPart.Anchored = true
             enemyBoxPart.CanCollide = false
             enemyBoxPart.Color = Color3.new(0, 1, 0)
+            enemyBoxPart.Material = Enum.Material.ForceField -- Macht die Box durch Wände sichtbar
             enemyBoxPart.Parent = Workspace
         end
         RunService.RenderStepped:Connect(function()
@@ -103,40 +88,11 @@ local function toggleEnemyBox()
 end
 
 local function onBulletFired(bullet)
-    bullet.Position = Vector3.new(0, -1000, 0)
-    bullet.Touched:Connect(function(hit)
-        local closestPlayer = getClosestPlayer()
-        if closestPlayer and hit:IsDescendantOf(closestPlayer.Character) then
-            print("Bullet hit the closest enemy!")
-        end
-    end)
-end
-
-local function disableWallCollision()
-    for _, part in pairs(Workspace:GetDescendants()) do
-        if part:IsA("Part") or part:IsA("MeshPart") then
-            part.CollisionGroup = "NoCollide"
-        end
+    if magicBulletsEnabled then
+        bullet.CanCollide = false
+        bullet.CollisionGroup = "NoCollide"
     end
 end
-
-disableWallCollision()
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.X then
-        teleportClosestHitboxToMe()
-    elseif input.KeyCode == Enum.KeyCode.C then
-        bulletsIgnoreWalls = not bulletsIgnoreWalls
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Flame", 
-            Text = "Bullet Wall Collision: " .. (bulletsIgnoreWalls and "OFF" or "ON"), 
-            Duration = 2
-        })
-    elseif input.KeyCode == Enum.KeyCode.E then
-        toggleEnemyBox()
-    end
-end)
 
 Workspace.ChildAdded:Connect(function(child)
     if child:IsA("Part") and child.Name == "Bullet" then
@@ -144,8 +100,19 @@ Workspace.ChildAdded:Connect(function(child)
     end
 end)
 
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        teleportClosestHitboxToMe()
+    elseif input.KeyCode == Enum.KeyCode.C then
+        toggleMagicBullets()
+    elseif input.KeyCode == Enum.KeyCode.E then
+        toggleEnemyBox()
+    end
+end)
+
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Permanent Reverse Teleport Loaded! // Press X to toggle hitbox, C to toggle bullet collision, E to toggle enemy box", 
+    Text = "Permanent Reverse Teleport Loaded! // Press X to teleport hitbox, C to toggle Magic Bullets, E to toggle enemy box", 
     Duration = 2
 })

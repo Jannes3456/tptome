@@ -1,15 +1,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
-
--- RemoteEvent für serverseitige Teleportation
-local teleportEvent = ReplicatedStorage:FindFirstChild("TeleportPlayersEvent")
-if not teleportEvent then
-    teleportEvent = Instance.new("RemoteEvent", ReplicatedStorage)
-    teleportEvent.Name = "TeleportPlayersEvent"
-end
 
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
@@ -18,22 +10,43 @@ local function isOnSameTeam(otherPlayer)
     return false
 end
 
-local function teleportPlayersToMe()
-    local character = player.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        teleportEvent:FireServer()
+local function getClosestPlayer()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, otherPlayer in pairs(Players:GetPlayers()) do
+        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if not isOnSameTeam(otherPlayer) then
+                local distance = (player.Character.HumanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = otherPlayer
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+local function teleportClosestPlayerToMe()
+    local closestPlayer = getClosestPlayer()
+    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local myPosition = player.Character.HumanoidRootPart.Position
+        if closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            closestPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition)
+        end
     end
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
-        teleportPlayersToMe()
+        teleportClosestPlayerToMe()
     end
 end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Teleport Loaded! // Press X to teleport all players to you", 
+    Text = "Reverse Teleport Loaded! // X to bring nearest enemy", 
     Duration = 2
 })

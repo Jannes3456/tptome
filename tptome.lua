@@ -7,9 +7,17 @@ local PhysicsService = game:GetService("PhysicsService")
 local player = Players.LocalPlayer
 local teleporting = false
 local magicBulletsEnabled = false
-local ESP = false
 local wallsInvisible = false
 local statusGui, statusLabel
+
+-- Set up Collision Groups to allow bullets to ignore walls
+local function setupCollisionGroups()
+    pcall(function()
+        PhysicsService:CreateCollisionGroup("NoCollideWalls")
+        PhysicsService:CollisionGroupSetCollidable("NoCollideWalls", "Default", false)
+        PhysicsService:CollisionGroupSetCollidable("NoCollideWalls", "NoCollideWalls", false)
+    end)
+end
 
 -- UI Label for Status Display in Bottom Left
 local function createStatusUI()
@@ -33,7 +41,6 @@ local function updateStatus()
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
                            "Magic Bullets: " .. (magicBulletsEnabled and "ON" or "OFF") .. "\n" ..
-                           "ESP: " .. (ESP and "ON" or "OFF") .. "\n" ..
                            "Walls: " .. (wallsInvisible and "INVISIBLE" or "VISIBLE")
     end
 end
@@ -66,12 +73,20 @@ local function getClosestPlayer()
 end
 
 local function teleportClosestHitboxToMe()
-    local closestPlayer = getClosestPlayer()
-    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        closestPlayer.Character.HumanoidRootPart.CFrame = player.Character.HumanoidRootPart.CFrame + player.Character.HumanoidRootPart.CFrame.LookVector * 3
-    end
     teleporting = not teleporting
     showNotification("Flame", "Hitbox Teleport " .. (teleporting and "Enabled" or "Disabled"))
+    
+    if teleporting then
+        RunService.RenderStepped:Connect(function()
+            if teleporting then
+                local closestPlayer = getClosestPlayer()
+                if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    local myPosition = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 3
+                    closestPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition)
+                end
+            end
+        end)
+    end
 end
 
 local function toggleMagicBullets()
@@ -79,6 +94,7 @@ local function toggleMagicBullets()
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") and obj.Name == "Bullet" then
             obj.CanCollide = not magicBulletsEnabled
+            obj.CollisionGroup = magicBulletsEnabled and "NoCollideWalls" or "Default"
         end
     end
     showNotification("Flame", "Magic Bullets " .. (magicBulletsEnabled and "Enabled" or "Disabled"))
@@ -91,12 +107,14 @@ local function toggleWalls()
             if part.Name:lower():find("wall") or part.Size.Y > 10 then
                 part.Transparency = wallsInvisible and 1 or 0
                 part.CanCollide = not wallsInvisible
+                part.CollisionGroup = wallsInvisible and "NoCollideWalls" or "Default"
             end
         end
     end
     showNotification("Flame", "Walls " .. (wallsInvisible and "Invisible" or "Visible"))
 end
 
+setupCollisionGroups()
 createStatusUI()
 updateStatus()
 

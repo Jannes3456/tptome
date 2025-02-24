@@ -63,9 +63,22 @@ local function onBulletFired(bullet)
         else
             -- Verhindert Kollision mit Wänden oder anderen Objekten
             bullet.CanCollide = false
+            bullet.CollisionGroup = "NoCollide"
         end
     end)
 end
+
+-- Setzt eine Kollisionsebene, um Kugeln durch Objekte zu lassen
+local function setupCollisionGroup()
+    local PhysicsService = game:GetService("PhysicsService")
+    pcall(function()
+        PhysicsService:CreateCollisionGroup("NoCollide")
+        PhysicsService:CollisionGroupSetCollidable("NoCollide", "Default", false)
+        PhysicsService:CollisionGroupSetCollidable("NoCollide", "NoCollide", false)
+    end)
+end
+
+setupCollisionGroup()
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end

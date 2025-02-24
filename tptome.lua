@@ -113,13 +113,17 @@ local function healPlayer()
     end
 end
 
--- Make bullets ignore everything except players
+-- Adjust damage calculation for headshots and body shots
 local function onBulletFired(bullet)
     bullet.CanCollide = false
     bullet.Touched:Connect(function(hit)
         local character = hit.Parent
         if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid:TakeDamage(25) -- Adjust damage as needed
+            local damage = 25 * 0.5 -- Default reduced damage
+            if hit.Name:lower():find("head") then
+                damage = damage * 6 -- Headshot multiplier (3x total damage)
+            end
+            character.Humanoid:TakeDamage(damage)
         end
     end)
 end

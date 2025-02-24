@@ -18,8 +18,8 @@ local function createStatusUI()
     statusGui.Parent = game:GetService("CoreGui")
 
     statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(0, 200, 0, 100)
-    statusLabel.Position = UDim2.new(0.01, 0, 0.80, 0) -- Bottom left
+    statusLabel.Size = UDim2.new(0, 250, 0, 120)
+    statusLabel.Position = UDim2.new(0.01, 0, 0.75, 0) -- Adjusted position
     statusLabel.BackgroundTransparency = 0.5
     statusLabel.TextScaled = true
     statusLabel.TextColor3 = Color3.new(1, 1, 1)
@@ -35,6 +35,7 @@ local function updateStatus()
     if statusLabel then
         statusLabel.Text = "[Flame Status]\n" ..
                            "Teleport: " .. (teleporting and "ON" or "OFF") .. "\n" ..
+                           "Hitbox Enlarged: " .. (not HitboxDisabled and "ON" or "OFF") .. "\n" ..
                            healthText
     end
 end
@@ -68,6 +69,7 @@ end
 
 local function toggleHitbox()
     HitboxDisabled = not HitboxDisabled
+    updateStatus()
 end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -117,12 +119,13 @@ local function teleportClosestHitboxToMe()
             teleportConnection = nil
         end
     end
+    updateStatus()
 end
 
 createStatusUI()
 updateStatus()
 
-UserInputService.InputBegan:a(function(input, gameProcessed)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
         teleportClosestHitboxToMe()

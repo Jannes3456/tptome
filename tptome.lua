@@ -8,7 +8,9 @@ local player = Players.LocalPlayer
 local teleporting = false
 local bulletsIgnoreWalls = false
 local boxVisible = false
+local enemyBoxVisible = false
 local boxPart = nil
+local enemyBoxPart = nil
 
 local function isOnSameTeam(otherPlayer)
     if player.Team and otherPlayer.Team then
@@ -43,11 +45,6 @@ local function teleportClosestHitboxToMe()
             if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
                 local myPosition = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 3
                 closestPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(myPosition) * CFrame.Angles(0, math.rad(180), 0)
-                
-                if closestPlayer.Character:FindFirstChild("Humanoid") then
-                    closestPlayer.Character.HumanoidRootPart.Size = Vector3.new(10, 10, 10)
-                    closestPlayer.Character.HumanoidRootPart.CanCollide = false
-                end
             end
             RunService.RenderStepped:Wait()
         end
@@ -79,18 +76,38 @@ local function toggleBox()
     end
 end
 
+local function toggleEnemyBox()
+    enemyBoxVisible = not enemyBoxVisible
+    local closestPlayer = getClosestPlayer()
+    if enemyBoxVisible and closestPlayer and closestPlayer.Character then
+        if not enemyBoxPart then
+            enemyBoxPart = Instance.new("Part")
+            enemyBoxPart.Size = Vector3.new(5, 7, 5)
+            enemyBoxPart.Transparency = 0.5
+            enemyBoxPart.Anchored = true
+            enemyBoxPart.CanCollide = false
+            enemyBoxPart.Color = Color3.new(0, 1, 0)
+            enemyBoxPart.Parent = Workspace
+        end
+        RunService.RenderStepped:Connect(function()
+            if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                enemyBoxPart.CFrame = closestPlayer.Character.HumanoidRootPart.CFrame
+            end
+        end)
+    else
+        if enemyBoxPart then
+            enemyBoxPart:Destroy()
+            enemyBoxPart = nil
+        end
+    end
+end
+
 local function onBulletFired(bullet)
+    bullet.Position = Vector3.new(0, -1000, 0)
     bullet.Touched:Connect(function(hit)
-        if hit:IsDescendantOf(player.Character) then return end 
-        
         local closestPlayer = getClosestPlayer()
         if closestPlayer and hit:IsDescendantOf(closestPlayer.Character) then
             print("Bullet hit the closest enemy!")
-        else
-            if bulletsIgnoreWalls then
-                bullet.CanCollide = false
-                bullet.CollisionGroup = "NoCollide"
-            end
         end
     end)
 end
@@ -104,7 +121,6 @@ local function disableWallCollision()
 end
 
 disableWallCollision()
-setupCollisionGroup()
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -118,7 +134,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
             Duration = 2
         })
     elseif input.KeyCode == Enum.KeyCode.E then
-        toggleBox()
+        toggleEnemyBox()
     end
 end)
 
@@ -130,6 +146,6 @@ end)
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Permanent Reverse Teleport Loaded! // Press X to toggle hitbox, C to toggle bullet collision, E to toggle box", 
+    Text = "Permanent Reverse Teleport Loaded! // Press X to toggle hitbox, C to toggle bullet collision, E to toggle enemy box", 
     Duration = 2
 })

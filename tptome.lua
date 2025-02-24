@@ -1,93 +1,167 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService") -- Für kontinuierliche Updates
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-local isFloating = false
+local isControllingClone = false
+local scriptActive = true -- Kontrolliert, ob das Skript aktiv ist
 local originalCFrame = nil
-local connection = nil
+local clonedCharacter = nil
+local clonedBackpack = {} -- Speichert geklonte Tools
 
-local function isOnSameTeam(otherPlayer)
-    if player.Team and otherPlayer.Team then
-        return player.Team == otherPlayer.Team
-    end
-    return false
+-- Funktion: Klont ein Tool in das Klon-Character-Modell
+local function cloneTool(tool, targetParent)
+    local clonedTool = tool:Clone()
+    clonedTool.Parent = targetParent
+    return clonedTool
 end
 
-local function getClosestPlayer()
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-
-    for _, otherPlayer in pairs(Players:GetPlayers()) do
-        if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            if not isOnSameTeam(otherPlayer) then
-                local distance = (humanoidRootPart.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPlayer = otherPlayer
-                end
-            end
+-- Funktion: Gibt dem Klon alle Waffen & Tools
+local function transferWeaponsToClone()
+    if not clonedCharacter then return end
+    local clonedHumanoid = clonedCharacter:FindFirstChildOfClass("Humanoid")
+    
+    -- Waffen aus dem Charakter kopieren
+    for _, tool in pairs(character:GetChildren()) do
+        if tool:IsA("Tool") then
+            local clonedTool = cloneTool(tool, clonedCharacter)
+            table.insert(clonedBackpack, clonedTool)
         end
     end
-    return closestPlayer
-end
 
-local function startFloating()
-    if isFloating then return end -- Falls du schon schwebst, nicht erneut starten
-    local closestPlayer = getClosestPlayer()
-    if closestPlayer and closestPlayer.Character and closestPlayer.Character:FindFirstChild("Head") then
-        local enemyHead = closestPlayer.Character.Head
-        originalCFrame = humanoidRootPart.CFrame -- Speichert die originale Position
-        isFloating = true -- Markiere, dass der Spieler schwebt
-
-        -- Verbindung zur Render-Schleife, um Position permanent anzupassen
-        connection = RunService.RenderStepped:Connect(function()
-            if not isFloating or not closestPlayer or not closestPlayer.Character then
-                connection:Disconnect()
-                return
-            end
-            -- Nur das Charakter-Modell bewegen (nicht die Hitbox)
-            for _, part in pairs(character:GetChildren()) do
-                if part:IsA("BasePart") and part ~= humanoidRootPart then
-                    part.CFrame = CFrame.new(enemyHead.Position + Vector3.new(0, 3, 0))
-                end
-            end
-        end)
-    end
-end
-
-local function stopFloating()
-    if not isFloating then return end -- Falls du nicht schwebst, nichts tun
-    isFloating = false
-    if connection then connection:Disconnect() end
-
-    -- Charakter-Modell zurück zur Original-Position setzen
-    if originalCFrame then
-        for _, part in pairs(character:GetChildren()) do
-            if part:IsA("BasePart") and part ~= humanoidRootPart then
-                part.CFrame = originalCFrame
-            end
+    -- Waffen aus dem Backpack kopieren
+    for _, tool in pairs(player.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            local clonedTool = cloneTool(tool, clonedCharacter)
+            table.insert(clonedBackpack, clonedTool)
         end
     end
+
+    -- Erste Waffe automatisch ausrüsten
+    if #clonedBackpack > 0 then
+        clonedHumanoid:EquipTool(clonedBackpack[1])
+    end
 end
 
+-- Funktion: Erstellt einen steuerbaren Klon
+local function createClone()
+    if not scriptActive or isControllingClone then return end
+    isControllingClone = true
+    originalCFrame = humanoidRootPart.CFrame -- Speichere Startposition
+
+    -- Klone den Charakter
+    clonedCharacter = character:Clone()
+    clonedCharacter.Parent = workspace
+    clonedCharacter.Name = "Clone_" .. player.Name
+
+    -- Entferne alte Skripte aus dem Klon
+    for _, obj in pairs(clonedCharacter:GetChildren()) do
+        if obj:IsA("Script") or obj:IsA("LocalScript") then
+            obj:Destroy()
+        end
+    end
+
+    -- Übertrage Waffen & Tools auf den Klon
+    transferWeaponsToClone()
+
+    -- Setze die Kamera & Steuerung auf den Klon
+    player.Character = clonedCharacter
+    workspace.CurrentCamera.CameraSubject = clonedCharacter:FindFirstChildOfClass("Humanoid")
+
+    -- Echten Charakter unsichtbar machen
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 1
+            part.CanCollide = false
+        end
+    end
+
+    StarterGui:SetCore("SendNotification", {
+        Title = "Flame",
+        Text = "Klon AKTIVIERT! // Drücke X zum Zurückwechseln",
+        Duration = 2
+    })
+end
+
+-- Funktion: Wechsel zurück zum echten Körper
+local function returnToRealCharacter()
+    if not isControllingClone then return end
+    isControllingClone = false
+
+    -- Setze Kamera & Steuerung zurück auf das Original
+    player.Character = character
+    workspace.CurrentCamera.CameraSubject = character:FindFirstChildOfClass("Humanoid")
+
+    -- Mache den echten Charakter wieder sichtbar
+    for _, part in pairs(character:GetChildren()) do
+        if part:IsA("BasePart") then
+            part.Transparency = 0
+            part.CanCollide = true
+        end
+    end
+
+    -- Waffen aus dem Klon entfernen & zurückgeben
+    for _, tool in pairs(clonedBackpack) do
+        if tool and tool.Parent then
+            tool:Destroy()
+        end
+    end
+    clonedBackpack = {}
+
+    -- Zerstöre den Klon
+    if clonedCharacter then
+        clonedCharacter:Destroy()
+        clonedCharacter = nil
+    end
+
+    -- Setze den echten Charakter an die ursprüngliche Position zurück
+    character:SetPrimaryPartCFrame(originalCFrame)
+
+    StarterGui:SetCore("SendNotification", {
+        Title = "Flame",
+        Text = "Klon DEAKTIVIERT! // Du bist wieder im echten Körper",
+        Duration = 2
+    })
+end
+
+-- Funktion: Beende das gesamte Skript mit `Z`
+local function disableScript()
+    if not scriptActive then return end
+    scriptActive = false
+
+    -- Falls gerade ein Klon aktiv ist, zurückwechseln
+    if isControllingClone then
+        returnToRealCharacter()
+    end
+
+    -- Entferne alle Verbindungen & blockiere `X`
+    UserInputService.InputBegan:Disconnect()
+    StarterGui:SetCore("SendNotification", {
+        Title = "Flame",
+        Text = "Skript deaktiviert! Neustart nötig zum Reaktivieren.",
+        Duration = 3
+    })
+end
+
+-- `X` drücken → Klon aktivieren oder deaktivieren (nur wenn Skript aktiv)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+    if gameProcessed or not scriptActive then return end
     if input.KeyCode == Enum.KeyCode.X then
-        startFloating()
+        if isControllingClone then
+            returnToRealCharacter()
+        else
+            createClone()
+        end
+    elseif input.KeyCode == Enum.KeyCode.Z then
+        disableScript() -- Beendet das Skript mit `Z`
     end
 end)
 
-UserInputService.InputEnded:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.X then
-        stopFloating()
-    end
-end)
-
-game:GetService("StarterGui"):SetCore("SendNotification", {
+StarterGui:SetCore("SendNotification", {
     Title = "Flame", 
-    Text = "Halte X gedrückt, um über dem Kopf eines Gegners zu schweben!", 
+    Text = "Drücke X, um in einen Klon zu wechseln! Drücke Z zum Deaktivieren!", 
     Duration = 2
 })
